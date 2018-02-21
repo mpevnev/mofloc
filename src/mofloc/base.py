@@ -99,20 +99,15 @@ class Flow():
         """
         self._event_sources.append(source)
 
-    def register_event_handler(self, event_filter, handler):
+    def register_event_handler(self, handler):
         """
         Register an event handler.
 
-        The 'handler' argument should be a callable that takes a single
-        arbitrary object as an argument, which will be supplied by an event
-        source.
+        'handler' argument should be an instance of EventHandler, or at least
+        support 'filter' and 'handle' methods.
 
-        The 'event_filter' argument should be a callable that takes a single
-        argument and returns a boolean. It will receive an event from an event
-        source as input, and should return truthy value if the received event
-        should be handled by the associated handler.
         """
-        self._event_handlers.append((event_filter, handler))
+        self._event_handlers.append(handler)
 
     def discard_events(self):
         """
@@ -145,9 +140,9 @@ class Flow():
 
     def _process_event(self, event):
         """ Process an event. """
-        for event_filter, handler in self._event_handlers:
-            if event_filter(event):
-                handler(event)
+        for handler in self._event_handlers:
+            if handler.filter(event):
+                handler.handle(event)
 
     def _has_event(self):
         """ Return True if some of the event sources has a pending event. """
@@ -184,6 +179,20 @@ class EventSource():
         Discard pending events.
         """
         pass
+
+
+class EventHandler():
+    """ An abstract class representing an event handler. """
+
+    def filter(self, event):
+        """
+        Return truthy value if 'event' should be handled by this handler.
+        """
+        raise NotImplementedError
+
+    def handle(self, event):
+        """ Handle an event. """
+        raise NotImplementedError
 
 
 class ChangeFlow(Exception):
