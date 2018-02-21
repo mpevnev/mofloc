@@ -13,20 +13,20 @@ class Flow():
     """
     A class used to represent a portion of program's control flow.
 
-    Subclasses may override 'flow_before_events' and 'flow_after_events'
-    methods to perform some tasks unrelated to events. When the flow needs to
-    be changed, raise a ChangeFlow exception.
+    When the flow needs to be changed, raise a ChangeFlow exception.
     """
 
     def __init__(self):
         self._entry_points = deque()
         self._event_sources = deque()
         self._event_handlers = deque()
+        self._preactions = deque()
+        self._postactions = deque()
         self._discard_events_flag = False
 
     #--------- flow control ---------#
 
-    def execute(self, *args, entry_point_id=DEFAULT_ENTRY_POINT, **kwargs):
+    def _execute(self, *args, entry_point_id=DEFAULT_ENTRY_POINT, **kwargs):
         """ Execute this flow, starting with given entry point. """
         found_an_entry_point = False
         for entry_id, method in self._entry_points:
@@ -37,17 +37,16 @@ class Flow():
         if not found_an_entry_point:
             raise MissingEntryPoint(entry_point_id)
         while True:
-            self.flow_before_events()
+            has_events = self._has_event()
+            for action, must_have_event in self._preactions:
+                if not has_events and must_have_event:
+                    continue
+                action()
             self._process_events()
-            self.flow_after_events()
-
-    def flow_before_events(self):
-        """ An action to be executed before processing any events. """
-        pass
-
-    def flow_after_events(self):
-        """ An action to be executed after processing any events. """
-        pass
+            for action, must_have_event in self._postactions:
+                if not has_events and must_have_event:
+                    continue
+                action()
 
     def register_entry_point(self, name, method):
         """
@@ -56,11 +55,41 @@ class Flow():
 
         Raise ValueError if an entry point with this name is already
         registered.
+
+        An action registered this way will be called only once, when the flow
+        is starting.
         """
         for entry_point_name, _ in self._entry_points:
             if entry_point_name == name:
                 raise ValueError(f"Entry point \"{name}\" is already registered")
         self._entry_points.append((name, method))
+
+    def register_prevent_action(self, action, must_have_event=False):
+        """
+        Register 'action' as an action to be run before processing any events.
+        It should be a callable with no arguments.
+
+        An action registered this way will be run every time the flow checks
+        for events, but only if there are some events to be processed.
+
+        If 'must_have_event' is truthy, execute the action only if there is a
+        pending event. If it's falsey, execute it in either case.
+        """
+        self._preactions.append((action, must_have_event))
+
+    def register_postevent_action(self, action, must_have_event=False):
+        """
+        Register 'action' as an action to be run after processing all events.
+
+        It should be a callable with no arguments.
+
+        An action registered this way will be run every time the flow checks
+        for events, but only if there are some events to be processed.
+
+        If 'must_have_event' is truthy, execute the action only if there is a
+        pending event. If it's falsey, execute it in either case.
+        """
+        self._postactions.append((action, must_have_event))
 
     #--------- event handling ---------#
 
@@ -92,7 +121,8 @@ class Flow():
         Discard any pending unprocessed events. Note that this will only work
         if registered event sources support discarding events.
 
-        If called during event handling, will *not* interrupt it.
+        If called during handing an event, handling will stop after the event
+        that's being handled currently is finished.
         """
         self._discard_events_flag = True
 
@@ -121,13 +151,20 @@ class Flow():
             if event_filter(event):
                 handler(event)
 
+    def _has_event(self):
+        """ Return True if some of the event sources has a pending event. """
+        for source in self._event_sources:
+            if source.has_event():
+                return True
+        return False
+
 
 class EventSource():
     """
     An abstract class representing an event source.
 
-    Subclasses should override 'get_event' method, and may override
-    'discard_events' method.
+    Subclasses should override 'get_event' and 'has_event' methods, and may
+    override 'discard_events' method.
     """
 
     def get_event(self):
@@ -135,6 +172,12 @@ class EventSource():
         Produce an event or retrieve it from some other source.
 
         Throw NoEvent exception if there were no event.
+        """
+        raise NotImplementedError
+
+    def has_event(self):
+        """
+        Return True if there is a pending event.
         """
         raise NotImplementedError
 
@@ -154,7 +197,7 @@ class ChangeFlow(Exception):
 
     Keyword-only argument 'entry_point' determines, which entry point of the
     target Flow object will be used, defaults to DEFAULT_ENTRY_POINT.
-    
+
     The rest of positional and keyword-only arguments will be fed to the target
     entry point method/function.
     """
@@ -192,7 +235,7 @@ def execute(flow, *args, entry_point=DEFAULT_ENTRY_POINT, **kwargs):
     """
     while flow is not None:
         try:
-            flow.execute(entry_point, *args, **kwargs)
+            flow._execute(entry_point, *args, **kwargs)
         except ChangeFlow as change:
             flow = change.new_flow
             entry_point = change.entry_point
