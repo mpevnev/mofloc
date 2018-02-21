@@ -212,7 +212,7 @@ class ChangeFlow(Exception):
 
 class NoEvent(Exception):
     """
-    An event source should throw this if there were no event produced.
+    An event source should throw this if there is no pending event.
     """
 
     def __init__(self):
