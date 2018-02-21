@@ -182,7 +182,14 @@ class EventSource():
 
 
 class EventHandler():
-    """ An abstract class representing an event handler. """
+    """
+    An abstract class representing an event handler.
+    
+    Subclasses should override:
+    1. 'filter' method, which should return a truthy
+    value if its argument event should be handled by the handler;
+    2. 'handle' method, which should perform some action on its argument event.
+    """
 
     def filter(self, event):
         """
