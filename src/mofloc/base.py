@@ -11,7 +11,7 @@ DEFAULT_ENTRY_POINT = "default"
 
 class Flow():
     """
-    An abstract class used to represent a portion of program's control flow.
+    A class used to represent a portion of program's control flow.
 
     Subclasses may override 'flow_before_events' and 'flow_after_events'
     methods to perform some tasks unrelated to events. When the flow needs to
