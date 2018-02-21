@@ -148,6 +148,15 @@ class EventSource():
 class ChangeFlow(Exception):
     """
     Throw such exception if the current program Flow needs to change.
+
+    The first argument to the constructor should be the Flow object that will
+    receive the control.
+
+    Keyword-only argument 'entry_point' determines, which entry point of the
+    target Flow object will be used, defaults to DEFAULT_ENTRY_POINT.
+    
+    The rest of positional and keyword-only arguments will be fed to the target
+    entry point method/function.
     """
 
     def __init__(self, new_flow, *args, entry_point=DEFAULT_ENTRY_POINT, **kwargs):
