@@ -7,8 +7,6 @@ Provides base classes and functions used troughout the library.
 
 from collections import deque
 
-DEFAULT_ENTRY_POINT = "default"
-
 class Flow():
     """
     A class used to represent a portion of program's control flow.
@@ -26,7 +24,7 @@ class Flow():
 
     #--------- flow control ---------#
 
-    def _execute(self, *args, entry_point_id=DEFAULT_ENTRY_POINT, **kwargs):
+    def _execute(self, entry_point_id, *args, **kwargs):
         """ Execute this flow, starting with given entry point. """
         found_an_entry_point = False
         for entry_id, method in self._entry_points:
@@ -195,14 +193,14 @@ class ChangeFlow(Exception):
     The first argument to the constructor should be the Flow object that will
     receive the control.
 
-    Keyword-only argument 'entry_point' determines, which entry point of the
-    target Flow object will be used, defaults to DEFAULT_ENTRY_POINT.
+    'entry_point' determines, which entry point of the target Flow object will
+    be used.
 
     The rest of positional and keyword-only arguments will be fed to the target
     entry point method/function.
     """
 
-    def __init__(self, new_flow, *args, entry_point=DEFAULT_ENTRY_POINT, **kwargs):
+    def __init__(self, new_flow, entry_point, *args, **kwargs):
         super().__init__("Uncaught ChangeFlow signal")
         self.new_flow = new_flow
         self.entry_point = entry_point
@@ -226,7 +224,7 @@ class MissingEntryPoint(Exception):
         super().__init__(f"Entry point \"{entry_point}\" does not exist")
 
 
-def execute(flow, *args, entry_point=DEFAULT_ENTRY_POINT, **kwargs):
+def execute(flow, entry_point, *args, **kwargs):
     """
     Start executing 'flow' using entry point 'entry_point' with positional
     and keyword arguments given by 'args' and 'kwargs' respectively, then
