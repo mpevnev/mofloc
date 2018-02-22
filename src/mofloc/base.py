@@ -15,7 +15,7 @@ class Flow():
     """
 
     def __init__(self):
-        self._entry_points = deque()
+        self._entry_points = {}
         self._event_sources = deque()
         self._event_handlers = deque()
         self._preactions = deque()
@@ -26,14 +26,9 @@ class Flow():
 
     def _execute(self, entry_point_id, *args, **kwargs):
         """ Execute this flow, starting with given entry point. """
-        found_an_entry_point = False
-        for entry_id, method in self._entry_points:
-            if entry_id == entry_point_id:
-                found_an_entry_point = True
-                method(*args, **kwargs)
-                break
-        if not found_an_entry_point:
+        if entry_point_id not in self._entry_points:
             raise MissingEntryPoint(entry_point_id)
+        self._entry_points[entry_point_id](*args, **kwargs)
         while True:
             has_events = self._has_event()
             for action, must_have_event in self._preactions:
@@ -57,10 +52,9 @@ class Flow():
         An action registered this way will be called only once, when the flow
         is starting.
         """
-        for entry_point_name, _ in self._entry_points:
-            if entry_point_name == name:
-                raise ValueError(f"Entry point \"{name}\" is already registered")
-        self._entry_points.append((name, method))
+        if name in self._entry_points:
+            raise ValueError(f"Entry point \"{name}\" is already registered")
+        self._entry_points[name] = method
 
     def register_prevent_action(self, action, must_have_event=False):
         """
@@ -184,7 +178,7 @@ class EventSource():
 class EventHandler():
     """
     An abstract class representing an event handler.
-    
+
     Subclasses should override:
     1. 'filter' method, which should return a truthy
     value if its argument event should be handled by the handler;
