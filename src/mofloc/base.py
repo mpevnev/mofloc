@@ -33,12 +33,9 @@ class Flow():
             raise MissingEntryPoint(self, entry_point_id)
         self._entry_points[entry_point_id](*args, **kwargs)
         while True:
-            has_events = self._has_event()
-            for action, must_have_event in self._preactions:
-                if not has_events and must_have_event:
-                    continue
+            for action in self._preactions:
                 action()
-            self._process_events()
+            has_events = self._process_events()
             for action, must_have_event in self._postactions:
                 if not has_events and must_have_event:
                     continue
@@ -96,7 +93,7 @@ class Flow():
         """
         self._event_handlers.append(handler)
 
-    def register_preevent_action(self, action, must_have_event=False):
+    def register_preevent_action(self, action):
         """
         Register 'action' as an action to be run before processing any events.
         It should be a callable with no arguments.
@@ -104,10 +101,11 @@ class Flow():
         An action registered this way will be run every time the flow checks
         for events.
 
-        If 'must_have_event' is truthy, execute the action only if there is a
-        pending event. If it's falsey, execute it in either case.
+        Notice the asymmetry between pre-event and post-event actions:
+        pre-event actions are run whether or not there are events pending,
+        post-event actions may be marked as requiring a pending event to run.
         """
-        self._preactions.append((action, must_have_event))
+        self._preactions.append(action)
 
     def register_postevent_action(self, action, must_have_event=False):
         """
@@ -120,6 +118,10 @@ class Flow():
 
         If 'must_have_event' is truthy, execute the action only if there is a
         pending event. If it's falsey, execute it in either case.
+
+        Notice the asymmetry between pre-event and post-event actions:
+        pre-event actions are run whether or not there are events pending,
+        post-event actions may be marked as requiring a pending event to run.
         """
         self._postactions.append((action, must_have_event))
 
@@ -138,11 +140,15 @@ class Flow():
     def _process_events(self):
         """
         Process any events that were fired by the event sources on this flow.
+
+        Return True if an event was processed, False otherwise.
         """
+        had_event = False
         for source in self._event_sources:
             try:
                 event = source.get_event()
                 self._process_event(event)
+                had_event = True
                 if self._discard_events_flag:
                     break
             except NoEvent:
@@ -151,6 +157,7 @@ class Flow():
             self._discard_events_flag = False
             for source in self._event_sources:
                 source.discard_events()
+        return had_event
 
     def _process_event(self, event):
         """ Process an event. """
@@ -158,20 +165,13 @@ class Flow():
             if handler.filter(event):
                 handler.handle(event)
 
-    def _has_event(self):
-        """ Return True if some of the event sources has a pending event. """
-        for source in self._event_sources:
-            if source.has_event():
-                return True
-        return False
-
 
 class EventSource():
     """
     An abstract class representing an event source.
 
-    Subclasses must override 'get_event' and 'has_event' methods, and may
-    override 'discard_events', 'stop' and 'restart' methods.
+    Subclasses must override 'get_event', and may override 'discard_events',
+    'stop' and 'restart' methods.
     """
 
     def get_event(self):
@@ -179,12 +179,6 @@ class EventSource():
         Produce an event or retrieve it from some other source.
 
         Throw NoEvent exception if there were no event.
-        """
-        raise NotImplementedError
-
-    def has_event(self):
-        """
-        Return True if there is a pending event.
         """
         raise NotImplementedError
 
