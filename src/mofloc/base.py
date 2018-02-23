@@ -67,6 +67,15 @@ class Flow():
         """
         self._entry_points[name] = method
 
+    def delete_entry_point(self, name):
+        """
+        Remove a registered entry point.
+        """
+        try:
+            del self._entry_points[name]
+        except KeyError:
+            pass
+
     #--------- event handling ---------#
 
     def register_event_source(self, source):
