@@ -262,10 +262,14 @@ def execute(flow, entry_point, *args, **kwargs):
     and keyword arguments given by 'args' and 'kwargs' respectively, then
     proceed with executing whatever flows are requested by raising ChangeFlow
     exceptions.
+
+    Execution end if any invoked flow ends without raising a ChangeFlow
+    exception or if it raises a ChangeFlow with target flow of None.
     """
     while flow is not None:
         try:
             flow._execute(entry_point, *args, **kwargs)
+            break
         except ChangeFlow as change:
             flow = change.new_flow
             entry_point = change.entry_point
