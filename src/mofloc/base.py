@@ -51,12 +51,16 @@ class Flow():
 
         Raise ValueError if an entry point with this name is already
         registered.
-
-        An action registered this way will be called only once, when the flow
-        is starting.
         """
         if name in self._entry_points:
             raise ValueError(f"Entry point \"{name}\" is already registered")
+        self._entry_points[name] = method
+
+    def redefine_entry_point(self, name, method):
+        """
+        Change the method associated with an entry point given by 'name', or
+        create an association if it doesn't already exist.
+        """
         self._entry_points[name] = method
 
     #--------- event handling ---------#
