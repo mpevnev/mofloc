@@ -30,7 +30,7 @@ class Flow():
     def _execute(self, entry_point_id, *args, **kwargs):
         """ Execute this flow, starting with given entry point. """
         if entry_point_id not in self._entry_points:
-            raise MissingEntryPoint(entry_point_id)
+            raise MissingEntryPoint(self, entry_point_id)
         self._entry_points[entry_point_id](*args, **kwargs)
         while True:
             has_events = self._has_event()
@@ -254,8 +254,8 @@ class NoEvent(Exception):
 class MissingEntryPoint(Exception):
     """ An exception to be thrown when a specified entry point doesn't exist. """
 
-    def __init__(self, entry_point):
-        super().__init__(f"Entry point \"{entry_point}\" does not exist")
+    def __init__(self, flow, entry_point):
+        super().__init__(f"Entry point \"{entry_point}\" does not exist in the flow {flow}")
 
 
 #--------- main function ---------#
