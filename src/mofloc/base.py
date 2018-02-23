@@ -102,7 +102,7 @@ class Flow():
         It should be a callable with no arguments.
 
         An action registered this way will be run every time the flow checks
-        for events, but only if there are some events to be processed.
+        for events.
 
         If 'must_have_event' is truthy, execute the action only if there is a
         pending event. If it's falsey, execute it in either case.
@@ -116,7 +116,7 @@ class Flow():
         It should be a callable with no arguments.
 
         An action registered this way will be run every time the flow checks
-        for events, but only if there are some events to be processed.
+        for events.
 
         If 'must_have_event' is truthy, execute the action only if there is a
         pending event. If it's falsey, execute it in either case.
