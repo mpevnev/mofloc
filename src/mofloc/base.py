@@ -7,6 +7,9 @@ Provides base classes and functions used troughout the library.
 
 from collections import deque
 
+
+#--------- base classes ---------#
+
 class Flow():
     """
     A class used to represent a portion of program's control flow.
@@ -56,7 +59,27 @@ class Flow():
             raise ValueError(f"Entry point \"{name}\" is already registered")
         self._entry_points[name] = method
 
-    def register_prevent_action(self, action, must_have_event=False):
+    #--------- event handling ---------#
+
+    def register_event_source(self, source):
+        """
+        Register an event source. It should be a callable with zero arguments
+        (a method is also acceptable), which should return None if there were
+        no events, or an arbitrary object representing an event otherwise.
+        """
+        self._event_sources.append(source)
+
+    def register_event_handler(self, handler):
+        """
+        Register an event handler.
+
+        'handler' argument should be an instance of EventHandler, or at least
+        support 'filter' and 'handle' methods.
+
+        """
+        self._event_handlers.append(handler)
+
+    def register_preevent_action(self, action, must_have_event=False):
         """
         Register 'action' as an action to be run before processing any events.
         It should be a callable with no arguments.
@@ -82,26 +105,6 @@ class Flow():
         pending event. If it's falsey, execute it in either case.
         """
         self._postactions.append((action, must_have_event))
-
-    #--------- event handling ---------#
-
-    def register_event_source(self, source):
-        """
-        Register an event source. It should be a callable with zero arguments
-        (a method is also acceptable), which should return None if there were
-        no events, or an arbitrary object representing an event otherwise.
-        """
-        self._event_sources.append(source)
-
-    def register_event_handler(self, handler):
-        """
-        Register an event handler.
-
-        'handler' argument should be an instance of EventHandler, or at least
-        support 'filter' and 'handle' methods.
-
-        """
-        self._event_handlers.append(handler)
 
     def discard_events(self):
         """
@@ -207,14 +210,16 @@ class EventHandler():
         raise NotImplementedError
 
 
+#--------- exceptions ---------#
+
 class ChangeFlow(Exception):
     """
-    Throw such exception if the current program Flow needs to change.
+    Throw an exception of this type if the current program Flow needs to
+    change.
 
-    The first argument to the constructor should be the Flow object that will
-    receive the control.
+    'new_flow' should be the Flow object that will receive the control.
 
-    'entry_point' determines, which entry point of the target Flow object will
+    'entry_point' determines which entry point of the target Flow object will
     be used.
 
     The rest of positional and keyword-only arguments will be fed to the target
@@ -244,6 +249,8 @@ class MissingEntryPoint(Exception):
     def __init__(self, entry_point):
         super().__init__(f"Entry point \"{entry_point}\" does not exist")
 
+
+#--------- main function ---------#
 
 def execute(flow, entry_point, *args, **kwargs):
     """
