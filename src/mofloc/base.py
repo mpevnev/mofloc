@@ -49,6 +49,8 @@ class Flow():
         Register 'method' as an entry point with name 'name'. It will be
         available later as a target for ChangeFlow exceptions and 'execute'.
 
+        'name' should be a hashable object.
+
         Raise ValueError if an entry point with this name is already
         registered.
         """
@@ -60,6 +62,8 @@ class Flow():
         """
         Change the method associated with an entry point given by 'name', or
         create an association if it doesn't already exist.
+
+        'name' should be a hashable object.
         """
         self._entry_points[name] = method
 
