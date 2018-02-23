@@ -150,8 +150,8 @@ class EventSource():
     """
     An abstract class representing an event source.
 
-    Subclasses should override 'get_event' and 'has_event' methods, and may
-    override 'discard_events' method.
+    Subclasses must override 'get_event' and 'has_event' methods, and may
+    override 'discard_events', 'stop' and 'restart' methods.
     """
 
     def get_event(self):
@@ -171,6 +171,17 @@ class EventSource():
     def discard_events(self):
         """
         Discard pending events.
+        """
+        pass
+
+    def stop(self):
+        """ Stop producing events. """
+        pass
+
+    def restart(self):
+        """
+        Restart the event source. An override of this should undo what a call
+        to 'stop' has done.
         """
         pass
 
