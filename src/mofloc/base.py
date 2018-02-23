@@ -81,8 +81,9 @@ class Flow():
     def register_event_source(self, source):
         """
         Register an event source. It should be a callable with zero arguments
-        (a method is also acceptable), which should return None if there were
-        no events, or an arbitrary object representing an event otherwise.
+        (a method is also acceptable), which should return an event object on
+        each invokation, or raise a NoEvent exceptions if there is no pending
+        event.
         """
         self._event_sources.append(source)
 
@@ -92,7 +93,6 @@ class Flow():
 
         'handler' argument should be an instance of EventHandler, or at least
         support 'filter' and 'handle' methods.
-
         """
         self._event_handlers.append(handler)
 
