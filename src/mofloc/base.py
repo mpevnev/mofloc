@@ -245,6 +245,19 @@ class ChangeFlow(Exception):
         self.kwargs = kwargs
 
 
+class StopFlow(Exception):
+    """
+    Throw an exception of this type if flow execution needs to stop,
+    immediately.
+
+    'return_value' will be returned by the enclosing 'execute'.
+    """
+
+    def __init__(self, return_value=None):
+        super().__init__("Uncaught StopFlow signal")
+        self.return_value = return_value
+
+
 class NoEvent(Exception):
     """
     An event source should throw this if there is no pending event.
@@ -270,10 +283,9 @@ def execute(flow, entry_point, *args, **kwargs):
     proceed with executing whatever flows are requested by raising ChangeFlow
     exceptions.
 
-    Execution ends if any invoked flow ends raises a ChangeFlow exception with
-    the target flow of None.
+    Execution ends if any invoked flow raises a StopFlow exception.
     """
-    while flow is not None:
+    while True:
         try:
             flow._execute(entry_point, *args, **kwargs)
         except ChangeFlow as change:
@@ -281,3 +293,5 @@ def execute(flow, entry_point, *args, **kwargs):
             entry_point = change.entry_point
             args = change.args
             kwargs = change.kwargs
+        except StopFlow as stop:
+            return stop.return_value
