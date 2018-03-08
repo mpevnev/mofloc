@@ -2,7 +2,6 @@
 Base module.
 
 Provides base classes and functions used troughout the library.
-
 """
 
 from collections import deque
@@ -15,6 +14,8 @@ class Flow():
     A class used to represent a portion of program's control flow.
 
     When the flow needs to be changed, raise a ChangeFlow exception.
+
+    When execution needs to stop, raise StopFlow exception.
     """
 
     def __init__(self):
@@ -233,7 +234,7 @@ class ChangeFlow(Exception):
     'entry_point' determines which entry point of the target Flow object will
     be used.
 
-    The rest of positional and keyword-only arguments will be fed to the target
+    The rest of positional and keyword arguments will be fed to the target
     entry point method/function.
     """
 
@@ -283,7 +284,8 @@ def execute(flow, entry_point, *args, **kwargs):
     proceed with executing whatever flows are requested by raising ChangeFlow
     exceptions.
 
-    Execution ends if any invoked flow raises a StopFlow exception.
+    Execution ends if any invoked flow raises a StopFlow exception, and the
+    function returns the value passed to the terminating exception.
     """
     while True:
         try:
