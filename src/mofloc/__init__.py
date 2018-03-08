@@ -29,5 +29,5 @@ a Flow object via 'register_event_handler(self, handler)'.
 
 """
 
-from mofloc.base import *
-from mofloc.extras import *
+from .base import *
+from .extras import *
