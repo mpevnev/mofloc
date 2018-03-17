@@ -15,7 +15,7 @@ class Flow():
 
     When the flow needs to be changed, raise a ChangeFlow exception.
 
-    When execution needs to stop, raise StopFlow exception.
+    When execution needs to stop, raise EndFlow exception.
     """
 
     def __init__(self):
@@ -246,7 +246,7 @@ class ChangeFlow(Exception):
         self.kwargs = kwargs
 
 
-class StopFlow(Exception):
+class EndFlow(Exception):
     """
     Throw an exception of this type if flow execution needs to stop,
     immediately.
@@ -255,7 +255,7 @@ class StopFlow(Exception):
     """
 
     def __init__(self, return_value=None):
-        super().__init__("Uncaught StopFlow signal")
+        super().__init__("Uncaught EndFlow signal")
         self.return_value = return_value
 
 
@@ -284,7 +284,7 @@ def execute(flow, entry_point, *args, **kwargs):
     proceed with executing whatever flows are requested by raising ChangeFlow
     exceptions.
 
-    Execution ends if any invoked flow raises a StopFlow exception, and the
+    Execution ends if any invoked flow raises a EndFlow exception, and the
     function returns the value passed to the terminating exception.
     """
     while True:
@@ -295,5 +295,5 @@ def execute(flow, entry_point, *args, **kwargs):
             entry_point = change.entry_point
             args = change.args
             kwargs = change.kwargs
-        except StopFlow as stop:
-            return stop.return_value
+        except EndFlow as end:
+            return end.return_value
