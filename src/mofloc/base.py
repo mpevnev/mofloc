@@ -89,8 +89,9 @@ class Flow():
         """
         Register an event handler.
 
-        'handler' argument should be an instance of EventHandler, or at least
-        support 'filter' and 'handle' methods.
+        'handler' should be a callable of a single argument, the event it
+        should handle. If the handler can't handle the event, it should return
+        False, otherwise it should do something and return True.
         """
         self._event_handlers.append(handler)
 
@@ -144,12 +145,12 @@ class Flow():
 
         Return True if an event was processed, False otherwise.
         """
-        had_event = False
+        processed = False
         for source in self._event_sources:
             try:
                 event = source.get_event()
-                self._process_event(event)
-                had_event = True
+                processed_this_event = self._process_event(event)
+                processed = processed or processed_this_event
                 if self._discard_events_flag:
                     break
             except NoEvent:
@@ -158,13 +159,15 @@ class Flow():
             self._discard_events_flag = False
             for source in self._event_sources:
                 source.discard_events()
-        return had_event
+        return processed
 
     def _process_event(self, event):
         """ Process an event. """
+        res = False
         for handler in self._event_handlers:
-            if handler.filter(event):
-                handler.handle(event)
+            if handler(event):
+                res = True
+        return res
 
 
 class EventSource():
@@ -199,27 +202,6 @@ class EventSource():
         to 'stop' has done.
         """
         pass
-
-
-class EventHandler():
-    """
-    An abstract class representing an event handler.
-
-    Subclasses should override:
-    1. 'filter' method, which should return a truthy
-    value if its argument event should be handled by the handler;
-    2. 'handle' method, which should perform some action on its argument event.
-    """
-
-    def filter(self, event):
-        """
-        Return truthy value if 'event' should be handled by this handler.
-        """
-        raise NotImplementedError
-
-    def handle(self, event):
-        """ Handle an event. """
-        raise NotImplementedError
 
 
 #--------- exceptions ---------#
