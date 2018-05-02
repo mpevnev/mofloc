@@ -50,7 +50,7 @@ class Flow():
             except (ChangeFlow, EndFlow):
                 self.run_termination_actions()
                 raise
-            except Exception as e:
+            except (Exception, KeyboardInterrupt) as e:
                 for typetuple, cleanup in self._on_exception.items():
                     if isinstance(e, typetuple):
                         cleanup(e)
