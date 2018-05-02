@@ -47,14 +47,14 @@ class Flow():
                     if not has_events and must_have_event:
                         continue
                     action()
-            except (ChangeFlow, EndFlow):
+            except (ChangeFlow, EndFlow) as e:
                 self.run_termination_actions()
-                raise
-            except (Exception, KeyboardInterrupt) as e:
+                raise e
+            except BaseException as e:
                 for typetuple, cleanup in self._on_exception.items():
                     if isinstance(e, typetuple):
                         cleanup(e)
-                raise
+                raise e
 
     def register_entry_point(self, name, method):
         """
