@@ -24,6 +24,8 @@ class Flow():
         self._event_handlers = deque()
         self._preactions = deque()
         self._postactions = deque()
+        self._on_exception = deque()
+        self._on_termination = deque()
         self._discard_events_flag = False
 
     #--------- flow control ---------#
@@ -34,13 +36,20 @@ class Flow():
             raise MissingEntryPoint(self, entry_point_id)
         self._entry_points[entry_point_id](*args, **kwargs)
         while True:
-            for action in self._preactions:
-                action()
-            has_events = self._process_events()
-            for action, must_have_event in self._postactions:
-                if not has_events and must_have_event:
-                    continue
-                action()
+            try:
+                for action in self._preactions:
+                    action()
+                has_events = self._process_events()
+                for action, must_have_event in self._postactions:
+                    if not has_events and must_have_event:
+                        continue
+                    action()
+            except Exception as e:
+                if isinstance(e, (ChangeFlow, EndFlow)):
+                    raise
+                for cleanup in self._on_exception:
+                    cleanup()
+                raise
 
     def register_entry_point(self, name, method):
         """
@@ -73,6 +82,26 @@ class Flow():
             del self._entry_points[name]
         except KeyError:
             pass
+
+    #--------- termination control ---------#
+
+    def register_exception_action(self, action):
+        """
+        Register an action to be run if this flow terminates with an exception
+        other than ChangeFlow or EndFlow.
+        """
+        self._on_exception.append(action)
+
+    def register_termination_action(self, action):
+        """
+        Register an action to be run if this flow terminates normally.
+        """
+        self._on_termination.append(action)
+
+    def run_termination_actions(self):
+        """ Run all registered termination actions. """
+        for term in self._on_termination:
+            term()
 
     #--------- event handling ---------#
 
@@ -273,6 +302,7 @@ def execute(flow, entry_point, *args, **kwargs):
         try:
             flow._execute(entry_point, *args, **kwargs)
         except ChangeFlow as change:
+            flow.run_termination_actions()
             flow = change.new_flow
             entry_point = change.entry_point
             args = change.args
