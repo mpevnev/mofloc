@@ -24,7 +24,7 @@ class Flow():
         self._event_handlers = deque()
         self._preactions = deque()
         self._postactions = deque()
-        self._on_exception = deque()
+        self._on_exception = {}
         self._on_termination = deque()
         self._discard_events_flag = False
 
@@ -34,9 +34,12 @@ class Flow():
         """ Execute this flow, starting with given entry point. """
         if entry_point_id not in self._entry_points:
             raise MissingEntryPoint(self, entry_point_id)
-        self._entry_points[entry_point_id](*args, **kwargs)
+        did_entry_point = False
         while True:
             try:
+                if not did_entry_point:
+                    self._entry_points[entry_point_id](*args, **kwargs)
+                    did_entry_point = True
                 for action in self._preactions:
                     action()
                 has_events = self._process_events()
@@ -44,11 +47,13 @@ class Flow():
                     if not has_events and must_have_event:
                         continue
                     action()
+            except (ChangeFlow, EndFlow):
+                self.run_termination_actions()
+                raise
             except Exception as e:
-                if isinstance(e, (ChangeFlow, EndFlow)):
-                    raise
-                for cleanup in self._on_exception:
-                    cleanup()
+                for typetuple, cleanup in self._on_exception.items():
+                    if isinstance(e, typetuple):
+                        cleanup(e)
                 raise
 
     def register_entry_point(self, name, method):
@@ -85,12 +90,16 @@ class Flow():
 
     #--------- termination control ---------#
 
-    def register_exception_action(self, action):
+    def register_exception_action(self, exception_or_tuple, action):
         """
-        Register an action to be run if this flow terminates with an exception
-        other than ChangeFlow or EndFlow.
+        Register an action to be run when an exception of a given type or
+        given types is raised. ChangeFlow and EndFlow cannot be handled in this
+        manner, however.
+
+        Exception action will receive the raised exception as its only
+        argument.
         """
-        self._on_exception.append(action)
+        self._on_exception[exception_or_tuple] = action
 
     def register_termination_action(self, action):
         """
@@ -302,44 +311,9 @@ def execute(flow, entry_point, *args, **kwargs):
         try:
             flow._execute(entry_point, *args, **kwargs)
         except ChangeFlow as change:
-            flow.run_termination_actions()
             flow = change.new_flow
             entry_point = change.entry_point
             args = change.args
             kwargs = change.kwargs
         except EndFlow as end:
-            flow.run_termination_actions()
             return end.return_value
-
-
-def execute_with_exception_control(flow, entry_point, flow_generator, 
-                                   exception_flow_entry_point,
-                                   *args, **kwargs):
-    """
-    Start executing a flow using a given entry point with given positional and
-    keyword arguments, then proceed with executing other flows requested by the
-    first one.
-
-    If an exception interrupts execution, run 
-    > flow_generator(current_flow)
-    and execute its return value as a new flow with the raised exception as
-    the sole argument and a given entry point.
-    """
-    while True:
-        try:
-            flow._execute(entry_point, *args, **kwargs)
-        except ChangeFlow as change:
-            flow.run_termination_actions()
-            flow = change.new_flow
-            entry_point = change.entry_point
-            args = change.args
-            kwargs = change.kwargs
-        except EndFlow as end:
-            flow.run_termination_actions()
-            return end.return_value
-        except Exception as e:
-            flow = flow_generator(flow)
-            entry_point = exception_flow_entry_point
-            args = (e,)
-            kwargs = {}
-
