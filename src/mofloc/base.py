@@ -286,7 +286,7 @@ class MissingEntryPoint(Exception):
         super().__init__(f"Entry point \"{entry_point}\" does not exist in the flow {flow}")
 
 
-#--------- main function ---------#
+#--------- main functions ---------#
 
 def execute(flow, entry_point, *args, **kwargs):
     """
@@ -308,4 +308,38 @@ def execute(flow, entry_point, *args, **kwargs):
             args = change.args
             kwargs = change.kwargs
         except EndFlow as end:
+            flow.run_termination_actions()
             return end.return_value
+
+
+def execute_with_exception_control(flow, entry_point, flow_generator, 
+                                   exception_flow_entry_point,
+                                   *args, **kwargs):
+    """
+    Start executing a flow using a given entry point with given positional and
+    keyword arguments, then proceed with executing other flows requested by the
+    first one.
+
+    If an exception interrupts execution, run 
+    > flow_generator(current_flow)
+    and execute its return value as a new flow with the raised exception as
+    the sole argument and a given entry point.
+    """
+    while True:
+        try:
+            flow._execute(entry_point, *args, **kwargs)
+        except ChangeFlow as change:
+            flow.run_termination_actions()
+            flow = change.new_flow
+            entry_point = change.entry_point
+            args = change.args
+            kwargs = change.kwargs
+        except EndFlow as end:
+            flow.run_termination_actions()
+            return end.return_value
+        except Exception as e:
+            flow = flow_generator(flow)
+            entry_point = exception_flow_entry_point
+            args = (e,)
+            kwargs = {}
+
