@@ -195,7 +195,7 @@ class Flow():
         for source in self._event_sources:
             try:
                 event = source.get_event()
-                processed_this_event = self._process_event(event)
+                processed_this_event = self.process_event(event)
                 processed = processed or processed_this_event
                 if self._discard_events_flag:
                     break
