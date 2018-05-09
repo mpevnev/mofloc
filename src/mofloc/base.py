@@ -114,6 +114,14 @@ class Flow():
 
     #--------- event handling ---------#
 
+    def process_event(self, event):
+        """ Process an event. """
+        res = False
+        for handler in self._event_handlers:
+            if handler(event):
+                res = True
+        return res
+
     def register_event_source(self, source):
         """
         Register an event source. It should be a callable with zero arguments
@@ -199,13 +207,6 @@ class Flow():
                 source.discard_events()
         return processed
 
-    def _process_event(self, event):
-        """ Process an event. """
-        res = False
-        for handler in self._event_handlers:
-            if handler(event):
-                res = True
-        return res
 
 
 class EventSource():
