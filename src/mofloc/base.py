@@ -32,9 +32,12 @@ class Flow():
 
     def _execute(self, entry_point_id, *args, **kwargs):
         """ Execute this flow, starting with given entry point. """
-        if entry_point_id not in self._entry_points:
-            raise MissingEntryPoint(self, entry_point_id)
-        did_entry_point = False
+        if self._entry_points:
+            if entry_point_id not in self._entry_points:
+                raise MissingEntryPoint(self, entry_point_id)
+            did_entry_point = False
+        else:
+            did_entry_point = True
         while True:
             try:
                 if not did_entry_point:
